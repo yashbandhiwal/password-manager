@@ -6,7 +6,7 @@ const User = require('../models/User');
 const Manager = require('../models/Manager')
 
 // @desc      generate password
-// @route     POST /api/v1/manager/generate
+// @route     POST /api/v1/manager/generatePassword
 // @access    Private
 exports.generatePassword = asyncHandler(async(req,res,next) => {
 
@@ -27,7 +27,7 @@ exports.generatePassword = asyncHandler(async(req,res,next) => {
 })
 
 // @desc      Save password
-// @route     POST /api/v1/manager/save
+// @route     POST /api/v1/manager/savePassword
 // @access    Private
 exports.savePassword = asyncHandler(async(req,res,next) => {
 
@@ -52,6 +52,123 @@ exports.savePassword = asyncHandler(async(req,res,next) => {
     res.status(200).json({
         success:true,
         message:"Password saved successfully"
+    })
+
+})
+
+// @desc      get all manager
+// @route     POST /api/v1/manager/getall
+// @access    Private
+exports.getall = asyncHandler(async(req,res,next) => {
+
+    let query;
+
+    // Finding resource
+    query = Manager.find();
+    
+    // query = query.sort('-createdAt');
+    
+    // Pagination
+    const page = parseInt(req.body.page, 10) || 1;
+    const limit = parseInt(req.body.limit, 10) || 25;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const total = await Manager.countDocuments();
+
+    query = Manager.aggregate([
+        {
+            $match:{
+
+            }
+        },
+        {
+            $lookup:{
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as:"userData"
+            }
+        },
+        {
+            $sort:{ "name":1 }
+        },
+        {
+            $skip: startIndex
+        },
+        {
+            $limit:limit
+        },
+        {
+            $unwind:{
+                path: '$userData',
+                preserveNullAndEmptyArrays: true,
+              },
+        },
+        {
+            $group:{
+                _id:"$userData._id",
+                userData:{$first:"$userData"},
+                data: { $push: {
+                    "_id":"$_id",
+                    "name":"$name",
+                    "userId": "$userId",
+                    "email": "$email",
+                    "password": "$password",
+                    "createdAt": "$createdAt",
+                    "modefiedAt": "$modefiedAt",
+                } }, 
+            }
+        },
+  
+    ])
+    
+
+    // Executing query
+    const results = await query;
+
+    // Pagination result
+    const pagination = {};
+    
+    if (endIndex < total) {
+        pagination.next = {
+        page: page + 1,
+        limit
+        };
+    }
+    
+    if (startIndex > 0) {
+        pagination.prev = {
+        page: page - 1,
+        limit
+        };
+    }
+
+    res.status(200).json({
+        success: true,
+        count: results.length,
+        pagination,
+        data: results
+    })
+
+      
+})
+
+// @desc      get one manager
+// @route     POST /api/v1/manager/getone
+// @access    Private
+exports.getOne = asyncHandler(async(req,res,next) => {
+
+    let manageId = req.body.manageId
+
+    let query = await Manager.findById(manageId)
+
+    if(!query){
+        return next(new ErrorResponse('Data not exist', 404));
+    } 
+
+    res.status(200).json({
+        success:true,
+        result:query
     })
 
 })

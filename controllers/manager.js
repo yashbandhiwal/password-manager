@@ -3,7 +3,8 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const Manager = require('../models/Manager')
+const Manager = require('../models/Manager');
+const {ObjectId} = require('mongodb');
 
 // @desc      generate password
 // @route     POST /api/v1/manager/generatePassword
@@ -169,6 +170,61 @@ exports.getOne = asyncHandler(async(req,res,next) => {
     res.status(200).json({
         success:true,
         result:query
+    })
+
+})
+
+// @desc      get one manager
+// @route     POST /api/v1/manager/getone
+// @access    Private
+// pending
+exports.viewPassword = asyncHandler(async(req,res,next) => {
+
+    let enc_password = req.body.enc_password;
+
+    let decrypt = await bcrypt.decrypt(enc_password);
+
+    console.log(decrypt);
+
+    res.status(200).json({
+        decrypt
+    })
+
+})
+
+// @desc      update manager
+// @route     POST /api/v1/manager/getone
+// @access    Private
+exports.updateManager = asyncHandler(async(req,res,next) => {
+
+    let {
+        name,
+        email,
+        password,
+        managerId,
+    } = req.body;
+
+    let queryFind = await Manager.findOne({
+        _id:ObjectId(managerId),
+        userId:ObjectId(managerId)
+    });
+
+    if(queryFind){
+        return next(ErrorResponse('Manage id not found',404))
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    password = await bcrypt.hash(password, salt);
+
+    await Manager.findByIdAndUpdate(managerId,{
+        name,
+        email,
+        password
+    })
+
+    res.status(200).json({
+        success:true,
+        message:"Successfully updated"
     })
 
 })

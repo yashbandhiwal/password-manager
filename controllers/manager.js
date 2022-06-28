@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Manager = require('../models/Manager');
 const {ObjectId} = require('mongodb');
+const CryptoJS = require('crypto-js');
 
 // @desc      generate password
 // @route     POST /api/v1/manager/generatePassword
@@ -40,8 +41,10 @@ exports.savePassword = asyncHandler(async(req,res,next) => {
     
     let userId = req.user.id
 
-    const salt = await bcrypt.genSalt(10);
-    password = await bcrypt.hash(password, salt);
+    password = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(password))
+
+    // const salt = await bcrypt.genSalt(10);
+    // password = await bcrypt.hash(password, salt);
 
     await Manager.create({
         name,
@@ -182,11 +185,10 @@ exports.viewPassword = asyncHandler(async(req,res,next) => {
 
     let enc_password = req.body.enc_password;
 
-    let decrypt = await bcrypt.decrypt(enc_password);
-
-    console.log(decrypt);
+    let decrypt = CryptoJS.enc.Base64.parse(a).toString(CryptoJS.enc.Utf8)
 
     res.status(200).json({
+        success:true,
         decrypt
     })
 
@@ -213,8 +215,7 @@ exports.updateManager = asyncHandler(async(req,res,next) => {
         return next(ErrorResponse('Manage id not found',404))
     }
 
-    const salt = await bcrypt.genSalt(10);
-    password = await bcrypt.hash(password, salt);
+    password = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(password))
 
     await Manager.findByIdAndUpdate(managerId,{
         name,
